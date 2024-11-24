@@ -23,7 +23,6 @@ export default function ProductList() {
         getProducts();
     }, [])
 
-
     const getProducts = async () => {
         try {
             setLoading(true);
