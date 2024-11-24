@@ -33,6 +33,7 @@ export default function ProductList() {
         } finally {
             setLoading(false);
         }
+        
     }
 
     const imageBodyTemplate = (product) => {
