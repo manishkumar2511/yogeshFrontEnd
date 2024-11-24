@@ -106,7 +106,7 @@ function AddProduct() {
                         <input className="form-control" type="file" id="ProductImage" accept="image/*"
                             onChange={handleFileChange} />
                     </div>
-                    
+                    {/*  */}
                     <div className="col-12">
                         <Editor value={description} id="Description" modules={editorModules} style={{ height: '120px' }} onTextChange={(e) => setDescription(e.htmlValue)} />
                     </div>
