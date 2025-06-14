@@ -17,13 +17,25 @@ const editorModules = {
     toolbar: [["bold", "italic", "underline", "strike"], [{ list: "ordered" }, { list: "bullet" }]],
 };
 
+
 function AddProduct() {
+    const [categories, setCategories] = useState([]);
+    const [categoryFetched, setCategoryFetched] = useState(false);
     const [productDetails, setProductDetails] = useState(initialState);
     const [description, setDescription] = useState("");
     const isVisible = useSelector((state) => state.product.isVisible);
     const productToEdit = useSelector((state) => state.product.data);
-
     const dispatch = useDispatch();
+
+    const fetchCategories = async () => {
+        try {
+            const response = await axiosInstance.get("/Product/GetProductCategory");
+            setCategories(response.data.data || []);
+            setCategoryFetched(true);
+        } catch (error) {
+            toast.error("Failed to load categories.");
+        }
+    };
 
 
     useEffect(() => {
@@ -96,11 +108,25 @@ function AddProduct() {
                         <input type="text" id='Price' className="form-control" placeholder="Price" value={productDetails.Price} onChange={handleInput} />
                     </div>
                     <div className="col-6 ">
-                        <select className='form-select' id='CategoryId' onChange={handleInput} value={productDetails.CategoryId}>
+                        <select
+                            className="form-select"
+                            id="CategoryId"
+                            onChange={handleInput}
+                            onClick={() => {
+                                if (!categoryFetched) {
+                                    fetchCategories();
+                                }
+                            }}
+                            value={productDetails.CategoryId}
+                        >
                             <option value="">Category</option>
-                            <option value="1">Category 1</option>
-                            <option value="2">Category 2</option>
+                            {categories.map((cat) => (
+                                <option key={cat.categoryId} value={cat.categoryId}>
+                                    {cat.categoryName}
+                                </option>
+                            ))}
                         </select>
+
                     </div>
                     <div className="col-6">
                         <input className="form-control" type="file" id="ProductImage" accept="image/*"
