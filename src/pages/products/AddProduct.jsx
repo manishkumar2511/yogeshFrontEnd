@@ -18,13 +18,15 @@ const editorModules = {
 };
 
 
-function AddProduct() {
+function AddProduct({ onProductAdded }) {
     const [categories, setCategories] = useState([]);
     const [categoryFetched, setCategoryFetched] = useState(false);
     const [productDetails, setProductDetails] = useState(initialState);
     const [description, setDescription] = useState("");
+    const [existingImage, setExistingImage] = useState(null);
     const isVisible = useSelector((state) => state.product.isVisible);
-    const productToEdit = useSelector((state) => state.product.data);
+    const productToEdit = useSelector((state) => state.product.data);  
+    const isEditMode = productToEdit && productToEdit.productId;
     const dispatch = useDispatch();
 
     const fetchCategories = async () => {
@@ -39,22 +41,45 @@ function AddProduct() {
 
 
     useEffect(() => {
-        if (productToEdit && isVisible) {
-            setProductDetails({
-                ProductName: productToEdit.productName,
-                Price: productToEdit.price,
-                CategoryId: productToEdit.productId
-            })
-            setDescription(productToEdit.description);
-        }
+        const loadModalData = async () => {
+            if (!categoryFetched) {
+                await fetchCategories();
+            }
 
-    }, [isVisible, productToEdit])
+            if (productToEdit?.productId) {
+                try {
+                    const res = await axiosInstance.get(`/Product/GetProductsByProductId/${productToEdit.productId}`);
+                    const product = res.data.data?.[0];
+
+                    setProductDetails({
+                        ProductName: product.productName,
+                        Price: product.price,
+                        CategoryId: product.categoryId,
+                        ProductImage: null,
+                    });
+                    setDescription(product.description);
+                } catch (error) {
+                    toast.error("Failed to load product data.");
+                }
+            } else {
+                setProductDetails(initialState);
+                setDescription("");
+            }
+        };
+
+        if (isVisible) {
+            loadModalData();
+        }
+    }, [isVisible]);
+
+
 
     const handleClose = () => {
         dispatch(reset());
         setProductDetails(initialState);
         setDescription("");
-    }
+        setCategoryFetched(false);
+    };
 
 
     const handleInput = (e) => {
@@ -70,33 +95,53 @@ function AddProduct() {
     };
 
     const handleSubmit = async (e) => {
+        debugger;
         e.preventDefault();
-        let formData = new FormData();
+
+        const formData = new FormData();
         formData.append("ProductName", productDetails.ProductName);
         formData.append("Description", description);
         formData.append("Price", productDetails.Price);
         formData.append("CategoryId", productDetails.CategoryId);
+
         if (productDetails.ProductImage) {
             formData.append("ProductImage", productDetails.ProductImage);
         }
 
+        const isEditMode = productToEdit && productToEdit.productId;
+
         try {
-            const response = await axiosInstance.post("/Product/AddProduct", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            const response = isEditMode
+                ? await axiosInstance.put(`/Product/UpdateProduct/${productToEdit.productId}`, formData, {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                })
+                : await axiosInstance.post("/Product/AddProduct", formData, {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                });
+
             toast.success(response.data.message);
 
-        } catch (error) {
-            console.log(error);
+            if (onProductAdded) onProductAdded();
+            handleClose();
 
+        } catch (error) {
+            console.error("Product Submit Error", error);
+            if (error.response) {
+                toast.error(`${isEditMode ? "Update" : "Add"} failed: ${error.response.data.message || "Server error"}`);
+            } else {
+                toast.error(`${isEditMode ? "Update" : "Add"} failed: Network or server issue`);
+            }
         }
-    }
+    };
+
 
 
     return (
-        <Dialog header="Add Product" visible={isVisible}
+        <Dialog header={isEditMode ? "Edit Product" : "Add Product"} visible={isVisible}
             style={{ width: '50vw' }}
             onHide={handleClose}>
             <form onSubmit={handleSubmit}>
@@ -112,20 +157,16 @@ function AddProduct() {
                             className="form-select"
                             id="CategoryId"
                             onChange={handleInput}
-                            onClick={() => {
-                                if (!categoryFetched) {
-                                    fetchCategories();
-                                }
-                            }}
                             value={productDetails.CategoryId}
                         >
-                            <option value="">Category</option>
-                            {categories.map((cat) => (
+                            <option value="">Select Category</option>
+                            {categories.map(cat => (
                                 <option key={cat.categoryId} value={cat.categoryId}>
                                     {cat.categoryName}
                                 </option>
                             ))}
                         </select>
+
 
                     </div>
                     <div className="col-6">

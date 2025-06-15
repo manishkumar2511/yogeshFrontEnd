@@ -6,12 +6,14 @@ import { setProduct } from "../../redux/productSlice";
 import Loader from "../../component/Loader/Loader";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { ConfirmDialog } from 'primereact/confirmdialog';
+import { toast } from 'react-toastify';
+
 
 
 
 const BASE_URL = import.meta.env.VITE_BASE_URL
 
-export default function ProductList() {
+export default function ProductList({ refreshTrigger, onProductDeleted }) {
     const [list, setList] = useState([])
     const [loading, setLoading] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
@@ -21,7 +23,7 @@ export default function ProductList() {
 
     useEffect(() => {
         getProducts();
-    }, [])
+    }, [refreshTrigger])
 
     const getProducts = async () => {
         try {
@@ -33,7 +35,7 @@ export default function ProductList() {
         } finally {
             setLoading(false);
         }
-        
+
     }
 
     const imageBodyTemplate = (product) => {
@@ -41,13 +43,10 @@ export default function ProductList() {
     };
 
     const handleEdit = (id) => {
-        const editProduct = list.find((product) => product.$id === id);
-        dispatch(setProduct(editProduct));
-    }
+        dispatch(setProduct({ productId: id }));  
+    };
 
     const handleDelete = (id) => {
-        console.log(id);
-
         setDeleteId(id);
         setVisible(true);
     }
@@ -61,10 +60,12 @@ export default function ProductList() {
         try {
             const response = await axiosInstance.delete(`/Product/${deleteId}`);
             console.log(response);
-
+            toast.info(response.data.message);
+            setVisible(false);
+            setDeleteId(null);
+            if (onProductDeleted) onProductDeleted();
         } catch (error) {
-            console.log(error);
-
+            toast.error("Failed to delete product.");
         }
     }
 

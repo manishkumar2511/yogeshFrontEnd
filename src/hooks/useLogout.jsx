@@ -16,7 +16,7 @@ const useLogout = () => {
     const handleLogout = () => {
         clearCookie();
         dispatch(logout());
-        toast.success("Logout Successfully");
+        toast.warn("Logout Successfully");
         navigate("/login");
     };
 
